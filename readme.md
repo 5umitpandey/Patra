@@ -52,58 +52,61 @@ Patra is built with a modern, scalable, and delightful technology stack to ensur
 
 ---
 
-# WORK IN PROGRESS: ⏳
-## 🚀 Getting Started
 
-Want to get the development environment running on your local machine? Follow these simple steps.
+## ⏳ WORK IN PROGRESS: Development Roadmap
 
-### Prerequisites
+> **Heads Up!** The core application is still under heavy development. The information below outlines our current progress and the steps needed to get the project fully functional.
 
--   Node.js (v18.x or higher)
--   npm / yarn / pnpm
--   A `.env` file with the necessary environment variables (see `.env.example`).
+### Project Checklist & Status
 
-### Installation
+-   [x] **Initial Project Scaffolding**
+    -   [x] Setup React with TypeScript and Vite.
+    -   [x] Integrate Tailwind CSS for utility-first styling.
+-   [ ] **Core Features Implementation**
+    -   [ ] User Authentication (Sign up, Log in, Session Management).
+    -   [ ] Profile Creation & "Unfolding Profile" system.
+    -   [ ] "Glimpse" photo-blurring logic.
+    -   [ ] "Soul Compass" location and vibe affinity algorithm.
+    -   [ ] Real-time "Signals" feature with WebSockets.
+-   [ ] **Developer Experience & Contribution**
+    -   [x] Outline basic local setup instructions.
+    -   [ ] Create a comprehensive `CONTRIBUTING.md` guide.
+    -   [ ] Implement Pull Request and Issue templates on GitHub.
+    -   [ ] Set up a CI/CD pipeline for automated builds and testing.
+-   [ ] **Legal & Finalization**
+    -   [ ] Write and add the official `LICENSE.md` file (Planned: MIT License).
+    -   [ ] Add a Code of Conduct.
+
+---
+
+### Getting the Dev Environment Running
+
+While we build, you can still get a local version up and running.
+
+**Prerequisites:**
+* Node.js (v18.x or higher)
+* npm / yarn / pnpm
+* A `.env` file with the necessary environment variables (see `.env.example`).
+
+**Installation:**
 
 1.  **Clone the repository:**
     ```bash
     git clone [https://github.com/your-username/patra.git](https://github.com/your-username/patra.git)
     ```
-
 2.  **Navigate to the project directory:**
     ```bash
     cd patra
     ```
-
 3.  **Install dependencies:**
     ```bash
     npm install
     ```
-
 4.  **Run the development server:**
     ```bash
     npm run dev
     ```
-
 5.  Open [http://localhost:3000](http://localhost:3000) with your browser to see the result!
-
----
-
-## 🤝 How to Contribute
-
-We believe in the power of community. Patra is an open-source project, and we welcome contributions of all kinds. Whether you're fixing a bug, proposing a new feature, or improving our documentation, your help is cherished.
-
-1.  **Fork** the repository.
-2.  Create your **Feature Branch** (`git checkout -b feature/AmazingFeature`).
-3.  **Commit** your changes (`git commit -m 'Add some AmazingFeature'`).
-4.  **Push** to the branch (`git push origin feature/AmazingFeature`).
-5.  Open a **Pull Request**.
-
-Please read our `CONTRIBUTING.md` for our code of conduct and the process for submitting pull requests.
-
-## 📜 License
-
-This project is licensed under the MIT License - see the `LICENSE.md` file for details.
 
 ---
 
