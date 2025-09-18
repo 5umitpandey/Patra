@@ -1,0 +1,17 @@
+react
+react-dom
+tailwindcss
+autoprefixer
+postcss
+zustand
+@tensorflow/tfjs
+ml-distance
+ml-kmeans
+scikitjs
+natural
+typescript
+vite
+@vitejs/plugin-react
+eslint
+@typescript-eslint/eslint-plugin
+@typescript-eslint/parser
