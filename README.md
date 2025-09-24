@@ -408,11 +408,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Cloudinary for image management
 - Open source community for inspiration
 
-## 📞 Support
-
-
----
-
 <div align="center">
 
 **Built with ❤️ using Flutter**
