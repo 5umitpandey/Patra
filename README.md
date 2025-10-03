@@ -126,8 +126,8 @@ Patra is a modern dating application built with Flutter and powered by AI-driven
 
 ### 1. Clone Repository
 ```bash
-git clone https://github.com/utkarshshukla03/Patra1.0.git
-cd Patra1.0/patra_initial
+git clone https://github.com/5umitpandey/Patra.git
+cd Patra1/patra_initial
 ```
 
 ### 2. Install Flutter Dependencies
@@ -417,6 +417,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Built with ❤️ using Flutter**
 
-[⭐ Star this repo](https://github.com/utkarshshukla03/Patra1.0) • [🐛 Report Bug](https://github.com/utkarshshukla03/Patra1.0/issues) • [💡 Request Feature](https://github.com/utkarshshukla03/Patra1.0/issues)
+[⭐ Star this repo](https://github.com/5umitpandey/Patra) • [🐛 Report Bug](https://github.com/5umitpandey/Patra/issues) • [💡 Request Feature](https://github.com/5umitpandey/Patra/issues)
 
 </div>
