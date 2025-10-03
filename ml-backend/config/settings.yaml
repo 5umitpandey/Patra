@@ -1,0 +1,11 @@
+matching:
+  weights:
+    bio: 0.6
+    data: 0.4
+elo:
+  K: 32
+  initial_score: 1000
+model:
+  name: "all-MiniLM-L6-v2"
+logging:
+  level: "INFO"
