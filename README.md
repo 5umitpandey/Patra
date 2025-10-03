@@ -21,7 +21,6 @@
 - [Architecture](#architecture)
 - [Installation](#installation)
 - [Configuration](#configuration)
-- [ML Service](#ml-service)
 - [Deployment](#deployment)
 - [Contributing](#contributing)
 - [Team](#team)
