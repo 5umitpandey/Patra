@@ -1,101 +1,71 @@
-# Firebase ML Matching Algorithm Setup Guide
+# Patra ML Backend
 
-## Prerequisites
-1. Python 3.8 or higher
-2. Firebase project with Firestore enabled
-3. Firebase service account key
+This folder contains the machine learning backend for the Patra project. It provides user recommendation logic, bio-based matching, interaction-based personalization, and dynamic ranking using Elo scores. The backend is designed to be run as a CLI tool for generating and updating user recommendations.
 
-## Setup Instructions
+## Features
+- Structured user matching based on profile features
+- Semantic bio similarity using transformer embeddings
+- Personalized recommendations using swipe/interactions
+- Dynamic user ranking with Elo scoring
+- Modular, configurable pipeline
 
+## Folder Structure
+- `production/` — Core backend modules (matching, ranking, logging, etc.)
+- `config/` — YAML configuration files
+- `data/` — User and interaction data (CSV files)
+- `models/` — Pretrained or locally stored ML models
+- `tests/` — (Empty) Placeholder for future tests
+- `requirements.txt` — Python dependencies
+
+## Main Pipeline Overview
+The backend pipeline consists of the following steps:
+1. **Data Match**: Computes structured similarity between users (age, location, hobbies, etc.).
+2. **Bio Match**: Uses transformer models to compute semantic similarity between user bios.
+3. **Interaction Adjustment**: Adjusts candidate scores based on past user interactions (like, superlike, reject).
+4. **Elo Update**: Updates user Elo ratings based on interactions to reflect dynamic desirability.
+5. **Recommendation**: Combines all signals to generate a ranked feed for each user.
+
+## Configuration
+- Main settings are in `config/settings.yaml`.
+- You can adjust weights for different matching signals, model paths, logging, and other parameters.
+
+## Usage
 ### 1. Install Dependencies
 ```bash
-cd ml_backend/scripts
 pip install -r requirements.txt
 ```
 
-### 2. Firebase Service Account Setup
-1. Go to Firebase Console (https://console.firebase.google.com)
-2. Select your project
-3. Go to Project Settings > Service Accounts
-4. Click "Generate new private key"
-5. Download the JSON file
-6. Rename it to `firebase-service-account.json`
-7. Place it in the `ml_backend/scripts/` directory
-
-### 3. Test the Algorithm
+### 2. Run the Main Orchestrator
+Generate recommendations for a user:
 ```bash
-# Test mode - analyze data and show sample matches
-python reject_superlike_like.py
-
-# Server mode - start Flask API
-python reject_superlike_like.py server
+python production/main.py --user_id <USER_ID> [--top_n N]
 ```
 
-## API Endpoints
-
-### Health Check
-```
-GET http://localhost:5000/health
+Record an interaction (like, superlike, reject) and update recommendations:
+```bash
+python production/main.py --user_id <USER_ID> --interact <TARGET_ID> <ACTION>
 ```
 
-### Get Recommendations
-```
-GET http://localhost:5000/recommendations/<user_uid>?count=10
-```
+- `<USER_ID>`: The user for whom to generate recommendations
+- `<TARGET_ID>`: The user being interacted with
+- `<ACTION>`: One of `like`, `superlike`, or `reject`
 
-### Refresh Data
-```
-POST http://localhost:5000/refresh-data
-```
+### 3. Configuration
+Edit `config/settings.yaml` to tune weights, model paths, and other parameters.
 
-## Integration with Flutter App
+## Core Modules
+- `main.py`: Orchestrates the pipeline, CLI entry point
+- `recommender.py`: Combines all signals to generate recommendations
+- `data_match.py`: Structured feature-based matching
+- `bio_match.py`: Semantic similarity using transformer models
+- `reject_superlike_like.py`: Adjusts scores based on user interactions
+- `elo_update.py`: Maintains and updates Elo ratings
+- `config_loader.py`: Loads YAML configuration
+- `logger.py`: Logging setup
+- `utils.py`: Helper functions
 
-### Option 1: Direct Python Integration
-Use the `get_recommendations_api(user_uid, count)` function directly in your Python backend.
+## Notes
+- All data is stored locally in the `data/` folder.
+- The backend is modular and can be extended with new matching or ranking strategies.
+- For best results, ensure the `sentence-transformers` model specified in the config is available locally or can be downloaded.
 
-### Option 2: HTTP API Integration
-Call the Flask API endpoints from your Flutter app using HTTP requests.
-
-Example Flutter code:
-```dart
-Future<List<Map<String, dynamic>>> getMLRecommendations(String userUid) async {
-  try {
-    final response = await http.get(
-      Uri.parse('http://localhost:5000/recommendations/$userUid?count=10'),
-    );
-    
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      return List<Map<String, dynamic>>.from(data['recommendations']);
-    }
-  } catch (e) {
-    print('Error getting ML recommendations: $e');
-  }
-  return [];
-}
-```
-
-## Algorithm Features
-
-- **Bio Similarity**: Uses TF-IDF vectorization and cosine similarity
-- **Age Compatibility**: Weights users within 10 years age difference
-- **Location Matching**: Prioritizes same city/state users
-- **Interest Overlap**: Uses Jaccard similarity for shared interests
-- **Swipe History**: Considers previous like/superlike actions
-- **Gender Preferences**: Basic orientation-based filtering
-
-
-
-## Troubleshooting
-
-1. **Firebase Import Error**: Install firebase-admin: `pip install firebase-admin`
-2. **No Users Found**: Check Firebase connection and user collection
-3. **Permission Denied**: Verify service account key has Firestore read permissions
-4. **Empty Recommendations**: Check if user exists and has valid data
-
-## Security Notes
-
-- Keep `firebase-service-account.json` secure and never commit to version control
-- Add the API server behind authentication in production
-- Consider rate limiting for the API endpoints
-- Use HTTPS in production deployment
