@@ -84,13 +84,7 @@ Future<List<Map<String, dynamic>>> getMLRecommendations(String userUid) async {
 - **Swipe History**: Considers previous like/superlike actions
 - **Gender Preferences**: Basic orientation-based filtering
 
-## Customization
 
-You can adjust the matching weights in the `match_score()` function:
-```python
-final_score = (0.25*age_score + 0.15*loc_score + 0.25*hobby_score + 
-              0.10*lf_score + 0.15*bio_score + 0.10*gender_score)
-```
 
 ## Troubleshooting
 
