@@ -1,160 +1,136 @@
+"""
+reject_superlike_like.py
+------------------------
+Purpose:
+    Adjusts recommendation candidate scores based on past swipe interactions
+    (like / superlike / reject). This helps the recommender personalize the
+    feed using learned user preferences.
+
+Integration Order:
+    Runs AFTER:
+        - data_match.py
+        - bio_match.py
+    BEFORE:
+        - elo_update.py
+        - recommender.py
+"""
+
 import pandas as pd
 import numpy as np
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
-from sentence_transformers import SentenceTransformer
 from functools import lru_cache
+from production.logger import get_logger
+from production.config_loader import load_config
 
-# -------------------- CONFIG --------------------
-USERS_CSV = r"D:\SM\Projects\Patra_ML\data\profiles\users.csv"
-SWIPE_LOG_CSV = r"D:\SM\Projects\Patra_ML\data\profiles\swipe_log.csv"
+# -------------------- INIT --------------------
+logger = get_logger(__name__)
+config = load_config()
 
-WEIGHTS = {
-    "age": 0.22,
-    "location": 0.15,
-    "hobbies": 0.20,
-    "looking_for": 0.10,
-    "bio": 0.23,
-    "profession": 0.10,
+USERS_CSV = config["paths"]["users_csv"]
+SWIPE_LOG_CSV = config["paths"]["swipe_log_csv"]
+
+# Default interaction weight configuration
+ACTION_WEIGHTS = {
+    "superlike": 3.0,
+    "like": 2.0,
+    "reject": 0.0
 }
 
-ACTION_WEIGHTS = {"superlike": 3, "like": 2, "reject": 0}
+DEFAULT_WEIGHT = 1.0
 
 
-def get_sbert_model():
-    return SentenceTransformer("all-MiniLM-L6-v2")
-
-
-# -------------------- DATA LOADING --------------------
-def load_users(users_csv=USERS_CSV):
-    users = pd.read_csv(users_csv)
-    users.reset_index(inplace=True)  # keep original index for bio mapping
+# -------------------- LOADERS --------------------
+@lru_cache(maxsize=1)
+def load_users() -> pd.DataFrame:
+    """Load user profiles."""
+    users = pd.read_csv(USERS_CSV)
+    if "user_id" not in users.columns:
+        raise ValueError("users.csv must contain 'user_id'")
     return users
 
 
-def load_swipe_logs(swipe_log_csv=SWIPE_LOG_CSV):
+def load_swipe_logs() -> pd.DataFrame:
+    """Load swipe interaction logs."""
     try:
-        return pd.read_csv(swipe_log_csv)
+        logs = pd.read_csv(SWIPE_LOG_CSV)
+        if not {"user_id", "target_user_id", "action"}.issubset(logs.columns):
+            raise ValueError("swipe_log.csv must contain ['user_id', 'target_user_id', 'action']")
+        return logs
     except FileNotFoundError:
+        logger.warning("Swipe log not found, creating an empty log.")
         return pd.DataFrame(columns=["user_id", "target_user_id", "action"])
 
 
-# -------------------- SIMILARITY HELPERS --------------------
-def jaccard_score(list1, list2):
-    s1, s2 = set(list1), set(list2)
-    return len(s1 & s2) / len(s1 | s2) if s1 | s2 else 0
+# -------------------- CORE FUNCTIONS --------------------
+def get_interaction_weight(action: str) -> float:
+    """Return the weight multiplier for a given action."""
+    return ACTION_WEIGHTS.get(action.lower(), DEFAULT_WEIGHT)
 
 
-def compute_bio_embeddings(users):
-    model = get_sbert_model()
-    return model.encode(users["bio"].fillna("").tolist(), convert_to_numpy=True)
+def adjust_candidate_scores(user_id: str, candidates_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Adjusts candidate scores based on user’s past interactions.
 
+    Args:
+        user_id: The active user's ID.
+        candidates_df: DataFrame containing columns ['user_id', 'score'] from recommender/data_match.
 
-# -------------------- MATCH SCORE --------------------
-def match_score(u1, u2, bio_embeddings):
-    """Weighted multi-factor score between two users."""
-    # Age
-    age_score = max(0, 1 - abs(u1.age - u2.age) / 10)
-
-    # Location
-    if u1.city == u2.city:
-        loc_score = 1
-    elif u1.state == u2.state:
-        loc_score = 0.5
-    else:
-        loc_score = 0
-
-    # Hobbies & looking_for
-    hobby_score = jaccard_score(u1.hobbies.split(";"), u2.hobbies.split(";"))
-    lf_score = jaccard_score(u1.looking_for.split(";"), u2.looking_for.split(";"))
-
-    # Bio
-    def cosine_sim(a, b):
-        return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
-
-    bio_score = cosine_sim(bio_embeddings[u1["index"]], bio_embeddings[u2["index"]])
-
-
-    # Profession
-    prof_score = 1 if u1.profession == u2.profession else 0.5
-
-    # Final weighted score
-    total = (
-        WEIGHTS["age"] * age_score
-        + WEIGHTS["location"] * loc_score
-        + WEIGHTS["hobbies"] * hobby_score
-        + WEIGHTS["looking_for"] * lf_score
-        + WEIGHTS["bio"] * bio_score
-        + WEIGHTS["profession"] * prof_score
-    )
-    return total
-
-
-def action_weight(action):
-    return ACTION_WEIGHTS.get(action, 1)
-
-
-# -------------------- MATCH ENGINE --------------------
-def get_top_matches(user_index, top_n=10, use_swipe_logs=True):
+    Returns:
+        DataFrame with added column ['interaction_weight'] and adjusted 'score'.
+    """
     users = load_users()
     swipe_logs = load_swipe_logs()
-    bio_embeddings = compute_bio_embeddings(users)
 
-    u1 = users.iloc[user_index]
+    if user_id not in users["user_id"].values:
+        logger.warning(f"User {user_id} not found in users.csv.")
+        return candidates_df
 
-    candidates = []
-    for i, u2 in users.iterrows():
-        if i == user_index:
-            continue
-        score = match_score(u1, u2, bio_embeddings)
-        candidates.append((u2.user_id, u2.name, u2.gender, score))
+    user_swipes = swipe_logs[swipe_logs["user_id"] == user_id]
 
-    swiped, new_candidates = [], []
+    # Initialize weights
+    candidates_df["interaction_weight"] = DEFAULT_WEIGHT
 
-    # Check swipe history
-    for c in candidates:
-        swipe = swipe_logs[
-            (swipe_logs.user_id == u1.user_id)
-            & (swipe_logs.target_user_id == c[0])
-        ]
-        if not swipe.empty:
-            act = swipe.iloc[0]["action"]
-            if act == "reject":
-                continue
-            elif act in ["like", "superlike"]:
-                weighted_score = c[3] * action_weight(act)
-                swiped.append((c[0], c[1], c[2], weighted_score))
-        else:
-            new_candidates.append(c)
+    for idx, row in candidates_df.iterrows():
+        target_id = row["user_id"]
+        previous_action = user_swipes[user_swipes["target_user_id"] == target_id]
 
-    # Orientation handling
-    if u1.gender in ["Gay", "Lesbian"]:
-        same = sorted(
-            [c for c in new_candidates if c[2] == u1.gender],
-            key=lambda x: x[3],
-            reverse=True,
-        )
-        other = sorted(
-            [c for c in new_candidates if c[2] != u1.gender],
-            key=lambda x: x[3],
-            reverse=True,
-        )
-        n_same = min(len(same), top_n // 2)
-        n_other = top_n - n_same
-        mixed_new = sorted(same[:n_same] + other[:n_other], key=lambda x: x[3], reverse=True)
-    else:
-        mixed_new = sorted(new_candidates, key=lambda x: x[3], reverse=True)
+        if not previous_action.empty:
+            action = previous_action.iloc[0]["action"]
+            weight = get_interaction_weight(action)
+            candidates_df.at[idx, "interaction_weight"] = weight
 
-    # Final ranking
-    if use_swipe_logs:
-        swiped_sorted = sorted(swiped, key=lambda x: x[3], reverse=True)
-        remaining_slots = top_n - len(swiped_sorted)
-        if remaining_slots <= 0:
-            final_list = swiped_sorted[:top_n]
-        else:
-            final_list = swiped_sorted + mixed_new[:remaining_slots]
-    else:
-        final_list = mixed_new[:top_n]
+            # Optional: downweight rejects entirely
+            if action.lower() == "reject":
+                candidates_df.at[idx, "score"] = 0.0
+            else:
+                candidates_df.at[idx, "score"] *= weight
 
-    # Return DataFrame for consistency
-    return pd.DataFrame(final_list, columns=["user_id", "name", "gender", "score"])
+    logger.info(f"Adjusted candidate scores for user {user_id} based on swipe logs.")
+    return candidates_df.sort_values(by="score", ascending=False).reset_index(drop=True)
+
+
+# -------------------- UPDATE LOGS --------------------
+def update_user_interactions(user_id: str, target_user_id: str, action: str):
+    """Log a new interaction (like/superlike/reject)."""
+    swipe_logs = load_swipe_logs()
+    new_entry = pd.DataFrame([{
+        "user_id": user_id,
+        "target_user_id": target_user_id,
+        "action": action.lower()
+    }])
+    updated_logs = pd.concat([swipe_logs, new_entry], ignore_index=True)
+    updated_logs.to_csv(SWIPE_LOG_CSV, index=False)
+    logger.info(f"User {user_id} performed '{action}' on {target_user_id}.")
+
+
+# -------------------- STANDALONE TEST --------------------
+if __name__ == "__main__":
+    test_user_id = "U001"
+    # Dummy candidate scores (normally output of recommender)
+    dummy_candidates = pd.DataFrame({
+        "user_id": ["U002", "U003", "U004"],
+        "score": [0.75, 0.60, 0.55]
+    })
+
+    print("Before adjustment:\n", dummy_candidates)
+    adjusted = adjust_candidate_scores(test_user_id, dummy_candidates)
+    print("\nAfter adjustment:\n", adjusted)
