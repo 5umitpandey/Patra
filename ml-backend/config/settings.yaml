@@ -1,11 +1,46 @@
-matching:
-  weights:
-    bio: 0.6
-    data: 0.4
-elo:
-  K: 32
-  initial_score: 1000
-model:
+# ------------------------------
+# Patra ML Backend - Settings
+# ------------------------------
+
+paths:
+  users_csv: "data/users.csv"
+  swipe_log_csv: "data/swipe_log.csv"
+  # If you store models locally, add the path here
+  sentence_model_path: "models/sentence_model/all-MiniLM-L6-v2"
+
+recommender_top_n: 10  # Number of final recommendations per user
+
+recommender_weights:
+  base: 0.4         # data_match score weight
+  bio: 0.3          # bio_match similarity weight
+  interaction: 0.2  # superlike/like/reject adjustments
+  elo: 0.1          # Elo normalized weight
+
+elo_k: 32            # Elo sensitivity factor
+
+bio_model:
   name: "all-MiniLM-L6-v2"
+  max_features: 500
+  stop_words: "english"
+
 logging:
-  level: "INFO"
+  level: "INFO"       # DEBUG / INFO / WARNING / ERROR
+  file: "production/logs/app.log"  # optional log file path
+
+defaults:
+  user_elo: 1500      # Default Elo for new users
+  top_candidate_pool: 50  # Number of candidates to consider before final ranking
+
+# Optional tuning
+weights:
+  age: 0.22
+  location: 0.15
+  hobbies: 0.2
+  looking_for: 0.1
+  bio: 0.23
+  profession: 0.1
+
+action_weights:
+  superlike: 3
+  like: 2
+  reject: 0
