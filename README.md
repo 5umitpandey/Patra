@@ -387,7 +387,7 @@ flutter run --release
 <img src="https://github.com/5umitpandey.png" width="100px;" alt="Sumit Pandey"/><br />
 <b>Sumit Pandey</b><br />
 <i>AI/ML Engineer</i><br />
-<a href="#">🤖</a>
+<a href="https://github.com/5umitpandey">🤖</a>
 </td>
 </tr>
 </table>
